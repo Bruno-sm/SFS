@@ -3,6 +3,8 @@ module Original
 using Distributions
 using MicroLogging
 
+include("cec14_func.jl")
+
 export main
 
 
@@ -12,14 +14,6 @@ type SearchParams
 	max_generations::Unsigned
 	max_diffusion::Unsigned
 	walk_prob::Real
-end
-
-
-type SearchSpace
-	dim::Unsigned
-	lbound::Array{Real, 1}
-	ubound::Array{Real, 1}
-	f::Function
 end
 
 
@@ -37,14 +31,12 @@ function Base.copy(p::Particle)
 end
 
 
-function main(args)
+function main(args, func_number)
 	p = SearchParams(100, 29, 1, 1)
-	sp8 = SearchSpace(30, ones(30).*-500, ones(30).*500,
-			  x -> sum(-1.*x .* sin.(sqrt.(abs.(x)))))
-	sp9 = SearchSpace(30, ones(30).*-5.12, ones(30).*5.12,
-			  x -> sum(x.^2 .- 10.*cos.((2*pi).*x) .+ 10))
+	dim = parse(Int, args["--dimension"][1])
+	search_space = cec14_func(func_number, dim, -100, 100)
 	tic()
-	opt = stochastic_fractal_search(p, sp9)
+	opt = stochastic_fractal_search(p, search_space)
 	opt.f, toq() 
 end
 
@@ -145,11 +137,12 @@ function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::UInt64, bes
 		end
 		x = check_bounds(x, s.lbound, s.ubound) # x must be inside the bounds
 		f = s.f(x)
-		if f < new_particle.f
+		if f <= new_particle.f
 			new_particle.x = x
 			new_particle.f = f
 		end
 	end
+	println("$(new_particle)")
 	new_particle
 end
 

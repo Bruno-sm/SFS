@@ -8,7 +8,7 @@ import Original
 doc = """Stochastic Fractal Search.
 
 Usage:
-	sfs.jl original [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [<function>...]
+	sfs.jl original [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-d | --dimension=<dim>] <function>...
 	sfs.jl -h | --help
 	sfs.jl --version
 
@@ -18,6 +18,7 @@ Options:
 	--debug-output   Show debug messages.
 	-s --seed=<seed>   Random number generation seed.
 	-r --repetitions=<r>   Algorithm repetitions.
+	-d --dimension=<dim>   Dimension of the search space.
 """
 
 
@@ -29,8 +30,8 @@ function main()
 		srand(parse(Int, args["--seed"][1]))
 	end
 
-	if args["original"]
-		algorithm = Original.main
+	if length(args["--dimension"]) == 0
+		push!(args["--dimension"], "30")
 	end
 
 	r = 1 
@@ -38,25 +39,32 @@ function main()
 		r = parse(Int, args["--repetitions"][1])
 	end
 
-	algorithm(args) #In order to not count the precompilation time
+	if args["original"]
+		algorithm = Original.main
+	end
+
+	algorithm(args, 1) #In order to not count the precompilation time
 
 	if args["--debug-output"]
 		configure_logging(min_level=:debug)
 	end
 
-	val = 0
-	time = 0
-	for i = 1:r
-		v, t = algorithm(args)
-		val += v
-		time += t
-	end
-	val /= r
-	time /= r
+	for fn in args["<function>"] 
+		val = 0
+		time = 0
+		for i = 1:r
+			v, t = algorithm(args, parse(Int, fn))
+			val += v
+			time += t
+		end
+		val /= r
+		time /= r
 
-	println("Repetitions: $r")
-	println("Value: $val")
-	println("Time: $time")
+		println("\nFunction: $fn")
+		println("Repetitions: $r")
+		println("Value: $val")
+		println("Time: $time")
+	end
 end
 
 main()
