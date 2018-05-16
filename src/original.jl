@@ -11,9 +11,10 @@ export main
 
 type SearchParams
 	initial_population::Unsigned
-	max_generations::Unsigned
+	max_evaluations::Unsigned
 	max_diffusion::Unsigned
 	walk_prob::Real
+	error_threshold::Real
 end
 
 
@@ -32,9 +33,9 @@ end
 
 
 function main(args, func_number)
-	p = SearchParams(100, 29, 1, 1)
 	dim = parse(Int, args["--dimension"][1])
-	search_space = cec14_func(func_number, dim, -100, 100)
+	p = SearchParams(100, 10000*dim, 10, 0, 1e-8)
+	search_space = cec14_func(func_number, dim)
 	tic()
 	opt = stochastic_fractal_search(p, search_space)
 	opt.f, toq() 
@@ -42,6 +43,7 @@ end
 
 
 function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
+	evaluations = 0
 	# Initial population of particles 
 	points = [s.lbound + rand(s.dim).*(s.ubound - s.lbound) for i=1:sp.initial_population]
 	particles = [Particle(p, s.f(p)) for p in points]
@@ -49,9 +51,12 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 	# Best particle of the initial population 
 	best = minimum(particles)
     
-	for g = 1:sp.max_generations
-		# Proceso de difusión
+	g = 0
+	while evaluations < sp.max_evaluations && best.f - s.opt > sp.error_threshold 
+		g += 1
+		# diffusion process 
 		particles = sort(diffusion.(particles, sp, s, g, best))
+		evaluations += sp.max_diffusion
 		new_best = particles[1]
         
 		# First update process 
@@ -69,6 +74,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 			end
 			p.x = check_bounds(p.x, s.lbound, s.ubound)
 			p.f = s.f(p.x)
+			evaluations += 1
 			if p.f <= particles[i].f
 				particles[i] = p
 			end
@@ -99,6 +105,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 									   s.lbound, s.ubound)
 					p.f = s.f(p.x)
 				end
+				evaluations += 1
                 
 				if p.f < particles[i].f
 					particles[i] = p
@@ -112,6 +119,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 		end
         
 		@debug "Iteration $g"
+		@debug "$evaluations evaluations"
 		@debug "$(best.x)"
 		@debug "$(best.f)"
 	end
@@ -119,7 +127,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 end
 
 
-function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::UInt64, best::Particle)
+function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, best::Particle)
 	new_particle = Particle([], Inf) # New particle with infinity cost
 	for i = 1:sp.max_diffusion
 		σ = (log(g)/g) * (abs.(p.x - best.x))
@@ -142,7 +150,6 @@ function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::UInt64, bes
 			new_particle.f = f
 		end
 	end
-	println("$(new_particle)")
 	new_particle
 end
 

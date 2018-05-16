@@ -3,6 +3,7 @@ type SearchSpace
 	lbound::Array{Real, 1}
 	ubound::Array{Real, 1}
 	f::Function
+	opt::Real
 end
 
 
@@ -15,7 +16,7 @@ function cec14_func_eval(func_number::Int, x::Array, dimension::Int)
 end
 
 
-function cec14_func(func_number::Int, dimension::Int, lbound::Real, ubound::Real)
+function cec14_func(func_number::Int, dimension::Int)
 	f = x -> cec14_func_eval(func_number, x, dimension)
-	SearchSpace(dimension, ones(dimension)*lbound, ones(dimension)*ubound, f)
+	SearchSpace(dimension, ones(dimension)*-100, ones(dimension)*100, f, 100*func_number)
 end
