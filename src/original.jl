@@ -38,7 +38,7 @@ function main(args, func_number)
 	search_space = cec14_func(func_number, dim)
 	tic()
 	opt = stochastic_fractal_search(p, search_space)
-	opt.f, toq() 
+	opt.f, opt.f - search_space.opt, toq() 
 end
 
 

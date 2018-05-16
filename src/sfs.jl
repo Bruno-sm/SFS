@@ -8,7 +8,7 @@ import Original
 doc = """Stochastic Fractal Search.
 
 Usage:
-	sfs.jl original [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-d | --dimension=<dim>] <function>...
+	sfs.jl original [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-d | --dimension=<dim>] <function>...
 	sfs.jl -h | --help
 	sfs.jl --version
 
@@ -49,21 +49,33 @@ function main()
 		configure_logging(min_level=:debug)
 	end
 
+	if args["--csv-output"]
+		println("function,value,error,time")
+	end
+
 	for fn in args["<function>"] 
 		val = 0
+		error = 0
 		time = 0
 		for i = 1:r
-			v, t = algorithm(args, parse(Int, fn))
+			v, err, t = algorithm(args, parse(Int, fn))
 			val += v
+			error += err
 			time += t
 		end
 		val /= r
+		error /= r
 		time /= r
 
-		println("\nFunction: $fn")
-		println("Repetitions: $r")
-		println("Value: $val")
-		println("Time: $time")
+		if args["--csv-output"]
+			println("$fn,$val,$error,$time")
+		else
+			println("\nFunction: $fn")
+			println("Repetitions: $r")
+			println("Value: $val")
+			println("Error: $error")
+			println("Time: $time")
+		end
 	end
 end
 
