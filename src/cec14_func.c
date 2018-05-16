@@ -5,10 +5,10 @@
 */
 
 
-//#include <WINDOWS.H>      
 #include <stdio.h>
 #include <math.h>
 #include <malloc.h>
+#include <stdarg.h>
 
 #define INF 1.0e99
 #define EPS 1.0e-14
@@ -61,6 +61,24 @@ void cf_cal(double *, double *, int, double *,double *,double *,double *,int);
 double *OShift,*M,*y,*z,*x_bound;
 int ini_flag,n_flag,func_flag,*SS;
 
+static FILE *open_data_file(const char *filename, ...) {
+    static char FileName[256];
+    static char Buffer[256];
+    va_list argptr;
+    va_start(argptr, filename);
+    vsnprintf(Buffer, 255, filename, argptr);
+    va_end(argptr);
+
+    sprintf(FileName, "./cec2014_data/%s", Buffer);
+    FILE *fpt = fopen(FileName,"r");
+
+    if (fpt == NULL) {
+	printf("\n Error: Cannot open input file '%s' for reading \n", FileName);
+    }
+
+    return fpt;
+}
+
 
 void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 {
@@ -98,12 +116,7 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 		}
 
 		/* Load Matrix M*/
-		sprintf(FileName, "input_data/M_%d_D%d.txt", func_num,nx);
-		fpt = fopen(FileName,"r");
-		if (fpt==NULL)
-		{
-		    printf("\n Error: Cannot open input file for reading \n");
-		}
+		fpt = open_data_file("M_%d_D%d.txt", func_num,nx);
 		if (func_num<23)
 		{
 			M=(double*)malloc(nx*nx*sizeof(double));
@@ -111,7 +124,7 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 				printf("\nError: there is insufficient memory available!\n");
 			for (i=0; i<nx*nx; i++)
 			{
-				fscanf(fpt,"%Lf",&M[i]);
+				fscanf(fpt,"%lf",&M[i]);
 			}
 		}
 		else
@@ -121,18 +134,13 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 				printf("\nError: there is insufficient memory available!\n");
 			for (i=0; i<cf_num*nx*nx; i++)
 			{
-				fscanf(fpt,"%Lf",&M[i]);
+				fscanf(fpt,"%lf",&M[i]);
 			}
 		}
 		fclose(fpt);
 		
 		/* Load shift_data */
-		sprintf(FileName, "input_data/shift_data_%d.txt", func_num);
-		fpt = fopen(FileName,"r");
-		if (fpt==NULL)
-		{
-			printf("\n Error: Cannot open input file for reading \n");
-		}
+		fpt = open_data_file("shift_data_%d.txt", func_num);
 
 		if (func_num<23)
 		{
@@ -141,7 +149,7 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 			printf("\nError: there is insufficient memory available!\n");
 			for(i=0;i<nx;i++)
 			{
-				fscanf(fpt,"%Lf",&OShift[i]);
+				fscanf(fpt,"%lf",&OShift[i]);
 			}
 		}
 		else
@@ -153,13 +161,13 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 			{
 				for (j=0;j<nx;j++)
 				{
-					fscanf(fpt,"%Lf",&OShift[i*nx+j]);
+					fscanf(fpt,"%lf",&OShift[i*nx+j]);
 				}
 				fscanf(fpt,"%*[^\n]%*c"); 
 			}
 			for (j=0;j<nx;j++)
 			{
-				fscanf(fpt,"%Lf",&OShift[(cf_num-1)*nx+j]);
+				fscanf(fpt,"%lf",&OShift[(cf_num-1)*nx+j]);
 			}
 				
 		}
@@ -170,12 +178,7 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 		
 		if (func_num>=17&&func_num<=22)
 		{
-			sprintf(FileName, "input_data/shuffle_data_%d_D%d.txt", func_num, nx);
-			fpt = fopen(FileName,"r");
-			if (fpt==NULL)
-			{
-				printf("\n Error: Cannot open input file for reading \n");
-			}
+		        fpt = open_data_file("shuffle_data_%d_D%d.txt", func_num,nx);
 			SS=(int *)malloc(nx*sizeof(int));
 			if (SS==NULL)
 				printf("\nError: there is insufficient memory available!\n");
@@ -187,12 +190,7 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 		}
 		else if (func_num==29||func_num==30)
 		{
-			sprintf(FileName, "input_data/shuffle_data_%d_D%d.txt", func_num, nx);
-			fpt = fopen(FileName,"r");
-			if (fpt==NULL)
-			{
-				printf("\n Error: Cannot open input file for reading \n");
-			}
+		        fpt = open_data_file("shuffle_data_%d_D%d.txt", func_num,nx);
 			SS=(int *)malloc(nx*cf_num*sizeof(int));
 			if (SS==NULL)
 				printf("\nError: there is insufficient memory available!\n");
@@ -232,7 +230,6 @@ void cec14_test_func(double *x, double *f, int nx, int mx,int func_num)
 			f[i]+=400.0;
 			break;
 		case 5:
-			f[i] = 0;
 			ackley_func(&x[i*nx],&f[i],nx,OShift,M,1,1);
 			f[i]+=500.0;
 			break;
@@ -457,7 +454,7 @@ void ackley_func (double *x, double *f, int nx, double *Os,double *Mr,int s_flag
 	}
 	sum1 = -0.2*sqrt(sum1/nx);
 	sum2 /= nx;
-	f[0] =  E - 20.0*exp(sum1) - exp(sum2) +20.0;
+		f[0] =  E - 20.0*exp(sum1) - exp(sum2) +20.0;
 }
 
 
