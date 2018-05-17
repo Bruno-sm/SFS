@@ -34,10 +34,22 @@ end
 
 function main(args, func_number)
 	dim = parse(Int, args["--dimension"][1])
-	p = SearchParams(100, 10000*dim, 10, 0, 1e-8)
+	population = 100
+	if length(args["--population"]) != 0
+		population = parse(Int, args["--population"][1])
+	end
+	diffusion = 1
+	if length(args["--diffusion"]) != 0
+		diffusion = parse(Int, args["--diffusion"][1])
+	end
+	walk = 0
+	if length(args["--walk"]) != 0
+		walk = parse(Int, args["--walk"][1])
+	end
+	search_params = SearchParams(population, 10000*dim, diffusion, walk, 1e-8)
 	search_space = cec14_func(func_number, dim)
 	tic()
-	opt = stochastic_fractal_search(p, search_space)
+	opt = stochastic_fractal_search(search_params, search_space)
 	opt.f, opt.f - search_space.opt, toq() 
 end
 

@@ -8,7 +8,7 @@ import Original
 doc = """Stochastic Fractal Search.
 
 Usage:
-	sfs.jl original [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-d | --dimension=<dim>] <function>...
+	sfs.jl original [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
 	sfs.jl -h | --help
 	sfs.jl --version
 
@@ -18,7 +18,11 @@ Options:
 	--debug-output   Show debug messages.
 	-s --seed=<seed>   Random number generation seed.
 	-r --repetitions=<r>   Algorithm repetitions.
-	-d --dimension=<dim>   Dimension of the search space.
+	-n --dimension=<dim>   Dimension of the search space.
+	-w --walk=<w>	Probability (between 0 and 1) to choose walk 1 or walk 2.
+	-p --population=<p>   Population in each generation.
+	-d --diffusion=<dif>   Number of diffusions in the diffusion process.
+	--all   Executes the algorithm over the cec14 functions from 1 to 20.
 """
 
 
@@ -51,6 +55,10 @@ function main()
 
 	if args["--csv-output"]
 		println("function,value,error,time")
+	end
+
+	if args["--all"]
+		args["<function>"] = [string(i) for i in 1:20]
 	end
 
 	for fn in args["<function>"] 
