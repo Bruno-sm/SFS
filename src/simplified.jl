@@ -62,7 +62,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 	while evaluations < sp.max_evaluations && best.f - s.opt > sp.error_threshold 
 		g += 1
 		particles = diffusion.(particles, sp, s, g, best)
-		evaluations += sp.max_diffusion
+		evaluations += length(particles)*sp.max_diffusion
 		new_best = minimum(particles)
 		if (new_best.f < best.f)
 			best = copy(new_best)

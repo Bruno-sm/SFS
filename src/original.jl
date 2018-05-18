@@ -68,7 +68,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 		g += 1
 		# diffusion process 
 		particles = sort(diffusion.(particles, sp, s, g, best))
-		evaluations += sp.max_diffusion
+		evaluations += length(particles)*sp.max_diffusion
 		new_best = particles[1]
         
 		# First update process 
