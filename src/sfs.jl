@@ -4,11 +4,16 @@ using MicroLogging
 include("original.jl")
 import Original
 
+include("simplified.jl")
+import Simplified 
+
+
 
 doc = """Stochastic Fractal Search.
 
 Usage:
 	sfs.jl original [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl simplified [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
 	sfs.jl -h | --help
 	sfs.jl --version
 
@@ -45,6 +50,8 @@ function main()
 
 	if args["original"]
 		algorithm = Original.main
+	elseif args["simplified"]
+		algorithm = Simplified.main
 	end
 
 	algorithm(args, 1) #In order to not count the precompilation time
