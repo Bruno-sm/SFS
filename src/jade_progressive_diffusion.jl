@@ -1,10 +1,11 @@
-module Original
+module JadeProgressiveDiffusion
 
 using Distributions
 using MicroLogging
 
 include("cec14_func.jl")
 include("check_bounds.jl")
+include("jade.jl")
 
 export main
 
@@ -39,15 +40,15 @@ function main(args, func_number)
 	if length(args["--population"]) != 0
 		population = parse(Int, args["--population"][1])
 	end
-	diffusion = 1
+	max_diffusion = 5 
 	if length(args["--diffusion"]) != 0
-		diffusion = parse(Int, args["--diffusion"][1])
+		max_diffusion = parse(Int, args["--diffusion"][1])
 	end
 	walk = 0
 	if length(args["--walk"]) != 0
 		walk = parse(Int, args["--walk"][1])
 	end
-	search_params = SearchParams(population, 10000*dim, diffusion, walk, 1e-8)
+	search_params = SearchParams(population, 10000*dim, max_diffusion, walk, 1e-8)
 	search_space = cec14_func(func_number, dim)
 	tic()
 	opt = stochastic_fractal_search(search_params, search_space)
@@ -63,74 +64,33 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
     
 	# Best particle of the initial population 
 	best = minimum(particles)
-    
+
+	# Jade parameters
+	A = []
+	μCR = 0.5
+	μF = 0.5
+	p = 0.05
+	c = 0.1
+
 	g = 0
 	while evaluations < sp.max_evaluations && best.f - s.opt > sp.error_threshold 
 		g += 1
 		# diffusion process 
-		if sp.max_diffusion != 0
-			particles = sort(diffusion.(particles, sp, s, g, best))
-			evaluations += length(particles)*sp.max_diffusion
-			new_best = particles[1]
+		diffusion_number = round(Int, sp.max_diffusion - (sp.max_diffusion/sp.max_evaluations * evaluations))
+		@debug "Diffusion $diffusion_number"
+		if diffusion_number != 0
+			particles = sort(diffusion.(particles, sp, s, diffusion_number, g, best))
+			evaluations += length(particles)*diffusion_number
 		end
         
-		# First update process 
-		size = length(particles)
-		Pa = [(size - i + 1) / size for i=1:size] 
-		randvec1 = randperm(size)
-		randvec2 = randperm(size)
-		for i = 1:size
-			p = copy(particles[i])
-			for j = 1:s.dim
-				if rand() > Pa[i]
-					p.x[j] = particles[randvec1[i]].x[j] -
-					                   rand()*(particles[randvec2[i]].x[j] - p.x[j])
-				end
-			end
-			p.x = check_bounds(p.x, s.lbound, s.ubound)
-			p.f = s.f(p.x)
-			evaluations += 1
-			if p.f <= particles[i].f
-				particles[i] = p
-			end
-		end
+		# update process
+		x, v, A, μCR, μF = jade([p.x for p in particles], [p.f for p in particles],
+								A, s, μCR, μF, p, c)
+		evaluations += length(particles)
+		particles = [Particle(p[1], p[2]) for p in zip(x, v)]
         
-		particles = sort(particles)
-		new_best = particles[1]
-		if (new_best.f < best.f)
-			best = copy(new_best)
-		end
-        
-		# Second update process 
-		for i = 1:size
-			if rand() > Pa[i]
-				t = ceil(Int, rand()*size)
-				r = ceil(Int, rand()*size)
-				while t == r
-					r = ceil(Int, rand()*size)
-				end
-                
-				p = copy(particles[i])
-				if rand() < 0.5
-					p.x = check_bounds(p.x - rand() * (particles[t].x - best.x),
-									   s.lbound, s.ubound)
-					p.f = s.f(p.x)
-				else
-					p.x = check_bounds(p.x + rand() * (particles[t].x - particles[r].x),
-									   s.lbound, s.ubound)
-					p.f = s.f(p.x)
-				end
-				evaluations += 1
-                
-				if p.f < particles[i].f
-					particles[i] = p
-				end
-			end
-		end
-        
-		new_best = minimum(particles)
-		if (new_best.f < best.f)
-			best = copy(new_best)
+		if (particles[1].f < best.f)
+			best = copy(particles[1])
 		end
         
 		@debug "Iteration $g"
@@ -142,9 +102,9 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 end
 
 
-function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, best::Particle)
+function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, diffusion, best::Particle)
 	new_particle = Particle([], Inf) # New particle with infinity cost
-	for i = 1:sp.max_diffusion
+	for i = 1:diffusion
 		σ = (log(g)/g) * (abs.(p.x - best.x))
 		for i = 1:length(σ)
 			if σ[i] <= 0 # σ can't be 0
@@ -164,6 +124,11 @@ function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, best
 			new_particle.x = x
 			new_particle.f = f
 		end
+	end
+	if new_particle.f < p.f
+		@debug "MEJORA :)"
+	else
+		@debug "EMPEORA :("
 	end
 	new_particle
 end

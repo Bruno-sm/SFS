@@ -1,4 +1,4 @@
-module Original
+module OriginalProgressiveDiffusion
 
 using Distributions
 using MicroLogging
@@ -39,7 +39,7 @@ function main(args, func_number)
 	if length(args["--population"]) != 0
 		population = parse(Int, args["--population"][1])
 	end
-	diffusion = 1
+	diffusion = 5
 	if length(args["--diffusion"]) != 0
 		diffusion = parse(Int, args["--diffusion"][1])
 	end
@@ -68,11 +68,13 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 	while evaluations < sp.max_evaluations && best.f - s.opt > sp.error_threshold 
 		g += 1
 		# diffusion process 
-		if sp.max_diffusion != 0
-			particles = sort(diffusion.(particles, sp, s, g, best))
-			evaluations += length(particles)*sp.max_diffusion
-			new_best = particles[1]
+	    diffusion_number = round(Int, sp.max_diffusion/sp.max_evaluations * evaluations)
+#		diffusion_number = round(Int, sp.max_diffusion - (sp.max_diffusion/sp.max_evaluations * evaluations))
+		if diffusion_number != 0
+			particles = sort(diffusion.(particles, sp, s, diffusion_number, g, best))
+			evaluations += length(particles)*diffusion_number
 		end
+		new_best = particles[1]
         
 		# First update process 
 		size = length(particles)
@@ -142,9 +144,13 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 end
 
 
-function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, best::Particle)
+function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, diffusion, g::Int64, best::Particle)
 	new_particle = Particle([], Inf) # New particle with infinity cost
-	for i = 1:sp.max_diffusion
+	@debug "Diffusion $diffusion"
+	if diffusion == 0
+		new_particle = copy(p)
+	end
+	for i = 1:diffusion
 		σ = (log(g)/g) * (abs.(p.x - best.x))
 		for i = 1:length(σ)
 			if σ[i] <= 0 # σ can't be 0
@@ -164,6 +170,11 @@ function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, best
 			new_particle.x = x
 			new_particle.f = f
 		end
+	end
+	if new_particle.f < p.f
+		@debug "MEJORA :)"
+	else
+		@debug "EMPEORA :("
 	end
 	new_particle
 end

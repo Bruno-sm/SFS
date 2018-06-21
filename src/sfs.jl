@@ -1,3 +1,5 @@
+#!/bin/julia
+
 using DocOpt
 using MicroLogging
 
@@ -7,13 +9,35 @@ import Original
 include("simplified.jl")
 import Simplified 
 
+include("two_branches.jl")
+import TwoBranches
+
+include("original_with_jade.jl")
+import OriginalWithJade
+
+include("original_progressive_diffusion.jl")
+import OriginalProgressiveDiffusion 
+
+include("jade_progressive_diffusion.jl")
+import JadeProgressiveDiffusion 
+
+include("original_adaptive.jl")
+import OriginalAdaptive 
+
 
 
 doc = """Stochastic Fractal Search.
 
 Usage:
 	sfs.jl original [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
-	sfs.jl simplified [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl simplified [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl two_branches [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl original_with_jade [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl original_progressive_diffusion [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl jade_progressive_diffusion [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+	sfs.jl original_adaptive [--csv-output] [--debug-output] [-r | --repetitions=<r>] [-s | --seed=<seed>] [-n | --dimension=<dim>] [-w | --walk=<w>] [-p | --population=<p>] [-d | --diffusion=<dif>] [<function>... | --all]
+
+
 	sfs.jl -h | --help
 	sfs.jl --version
 
@@ -52,9 +76,20 @@ function main()
 		algorithm = Original.main
 	elseif args["simplified"]
 		algorithm = Simplified.main
+	elseif args["two_branches"]
+		algorithm = TwoBranches.main
+	elseif args["original_with_jade"]
+		algorithm = OriginalWithJade.main
+	elseif args["original_progressive_diffusion"]
+		algorithm = OriginalProgressiveDiffusion.main
+	elseif args["jade_progressive_diffusion"]
+		algorithm = JadeProgressiveDiffusion.main
+	elseif args["original_adaptive"]
+		algorithm = OriginalAdaptive.main
 	end
 
-	algorithm(args, 1) #In order to not count the precompilation time
+
+#	algorithm(args, 1) #In order to not count the precompilation time
 
 	if args["--debug-output"]
 		configure_logging(min_level=:debug)

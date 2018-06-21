@@ -1,4 +1,4 @@
-module Original
+module OriginalAdaptive
 
 using Distributions
 using MicroLogging
@@ -63,15 +63,22 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
     
 	# Best particle of the initial population 
 	best = minimum(particles)
+
+	diffusion_improvement = 1.0
     
 	g = 0
 	while evaluations < sp.max_evaluations && best.f - s.opt > sp.error_threshold 
+		old_evaluations = evaluations
 		g += 1
 		# diffusion process 
-		if sp.max_diffusion != 0
+		if (diffusion_improvement > 0 || rand() < 0.05)
 			particles = sort(diffusion.(particles, sp, s, g, best))
 			evaluations += length(particles)*sp.max_diffusion
 			new_best = particles[1]
+			diffusion_improvement = best.f - new_best.f
+			if best.f > new_best.f
+				new_best = copy(best)
+			end
 		end
         
 		# First update process 
@@ -79,7 +86,12 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 		Pa = [(size - i + 1) / size for i=1:size] 
 		randvec1 = randperm(size)
 		randvec2 = randperm(size)
+		c = 0
 		for i = 1:size
+			if c > 0.1*size
+				break
+			end
+			c += 1
 			p = copy(particles[i])
 			for j = 1:s.dim
 				if rand() > Pa[i]
@@ -92,6 +104,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 			evaluations += 1
 			if p.f <= particles[i].f
 				particles[i] = p
+				c = 0
 			end
 		end
         
@@ -102,7 +115,11 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 		end
         
 		# Second update process 
+		c = 0
 		for i = 1:size
+			if c > 0.1*size
+				break
+			end
 			if rand() > Pa[i]
 				t = ceil(Int, rand()*size)
 				r = ceil(Int, rand()*size)
@@ -124,6 +141,7 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
                 
 				if p.f < particles[i].f
 					particles[i] = p
+					c = 0
 				end
 			end
 		end
@@ -138,12 +156,25 @@ function stochastic_fractal_search(sp::SearchParams, s::SearchSpace)
 		@debug "$(best.x)"
 		@debug "$(best.f)"
 	end
+	#=
+	println("\nDifussion ratio table:")
+	for r in diffusion_ratio_table
+		println("$r")
+	end
+	println("\nratio table:")
+	for r in ratio_table
+		println("$r")
+	end
+	=#
 	best
 end
 
 
 function diffusion(p::Particle, sp::SearchParams, s::SearchSpace, g::Int64, best::Particle)
 	new_particle = Particle([], Inf) # New particle with infinity cost
+	if sp.max_diffusion == 0
+		new_particle = copy(p)
+	end
 	for i = 1:sp.max_diffusion
 		σ = (log(g)/g) * (abs.(p.x - best.x))
 		for i = 1:length(σ)
